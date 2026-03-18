@@ -37,4 +37,18 @@ export const TIMELINE_MFE_ROUTES: Routes = [
         (m) => m.ConflictRuleFormComponent
       ),
   },
+  {
+    path: 'bookings',
+    loadComponent: () =>
+      import('./features/bookings/feature/bookings-page.component').then(
+        (m) => m.BookingsPageComponent
+      ),
+  },
+  {
+    path: 'bookings/:id',
+    loadComponent: () =>
+      import('./features/bookings/feature/booking-detail.component').then(
+        (m) => m.BookingDetailComponent
+      ),
+  },
 ];
