@@ -2,17 +2,16 @@ import {
   Component,
   ChangeDetectionStrategy,
   input,
+  output,
   computed,
 } from '@angular/core';
-import { TimelineDay, TimelineSlot, TimelineBooking, TimelineEvent } from '../data-access/models/timeline.model';
+import { TimelineEventItem } from '../data-access/models/timeline.model';
 
-interface CalendarColumn {
+interface DayColumn {
   dayLabel: string;
   dateLabel: string;
   isToday: boolean;
-  slots: TimelineSlot[];
-  bookings: TimelineBooking[];
-  events: TimelineEvent[];
+  events: TimelineEventItem[];
 }
 
 @Component({
@@ -41,91 +40,68 @@ interface CalendarColumn {
 
           <!-- Events -->
           <div class="flex flex-col gap-1 p-2 flex-1">
-            @for (slot of col.slots; track slot.id) {
-              <div
-                class="rounded px-2 py-1 bg-blue-50 border border-blue-200"
-                [attr.title]="slot.listingTitle + ' — ' + slot.durationMinutes + ' min'"
-              >
-                <p class="text-xs font-medium text-blue-800 truncate">{{ slot.listingTitle }}</p>
-                <p class="text-xs text-blue-600">{{ formatTime(slot.start) }}</p>
-              </div>
-            }
-            @for (booking of col.bookings; track booking.id) {
-              <div
-                class="rounded px-2 py-1"
-                [class.bg-green-50]="booking.status === 'confirmed'"
-                [class.border-green-200]="booking.status === 'confirmed'"
-                [class.bg-yellow-50]="booking.status === 'pending'"
-                [class.border-yellow-200]="booking.status === 'pending'"
-                [class.border]="true"
-                [attr.title]="booking.clientName + ' · ' + booking.listingTitle"
-              >
-                <p
-                  class="text-xs font-medium truncate"
-                  [class.text-green-800]="booking.status === 'confirmed'"
-                  [class.text-yellow-800]="booking.status === 'pending'"
-                >{{ booking.clientName }}</p>
-                <p
-                  class="text-xs"
-                  [class.text-green-600]="booking.status === 'confirmed'"
-                  [class.text-yellow-600]="booking.status === 'pending'"
-                >{{ formatTime(booking.start) }}</p>
-              </div>
-            }
             @for (event of col.events; track event.id) {
-              <div
-                class="rounded px-2 py-1 bg-purple-50 border border-purple-200"
-                [attr.title]="event.title || 'Private event'"
-              >
-                <p class="text-xs font-medium text-purple-800 truncate">{{ event.title || 'Private' }}</p>
-                <p class="text-xs text-purple-600">{{ formatTime(event.start) }}</p>
-              </div>
+              @if (event.isPrivate) {
+                <!-- Private event — dashed border, purple, clickable -->
+                <button
+                  type="button"
+                  class="rounded px-2 py-1 border border-dashed border-purple-300 bg-purple-50 text-left w-full cursor-pointer hover:bg-purple-100 transition-colors"
+                  [attr.title]="(event.title || 'Private event') + ' — click to edit'"
+                  (click)="privateEventClick.emit(event)"
+                >
+                  <p class="text-xs font-medium truncate text-purple-800">{{ event.title || 'Private' }}</p>
+                  <p class="text-xs text-purple-600">{{ formatTime(event.start) }}</p>
+                </button>
+              } @else {
+                <!-- Slot / Booking event — solid border, blue, non-interactive -->
+                <div
+                  class="rounded px-2 py-1 border border-blue-200 bg-blue-50"
+                  [attr.title]="event.title || 'Event'"
+                >
+                  <p class="text-xs font-medium truncate text-blue-800">{{ event.title || event.sourceType }}</p>
+                  <p class="text-xs text-blue-600">{{ formatTime(event.start) }}</p>
+                </div>
+              }
             }
-            @if (col.slots.length === 0 && col.bookings.length === 0 && col.events.length === 0) {
+            @if (col.events.length === 0) {
               <p class="text-xs text-gray-300 text-center mt-2">—</p>
             }
           </div>
         </div>
       }
     </div>
-
-    <!-- Legend -->
-    <div class="flex items-center gap-4 mt-3">
-      <div class="flex items-center gap-1.5">
-        <span class="w-3 h-3 rounded-sm bg-blue-100 border border-blue-300 inline-block"></span>
-        <span class="text-xs text-gray-500">Slot</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <span class="w-3 h-3 rounded-sm bg-green-100 border border-green-300 inline-block"></span>
-        <span class="text-xs text-gray-500">Booking (confirmed)</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <span class="w-3 h-3 rounded-sm bg-yellow-100 border border-yellow-300 inline-block"></span>
-        <span class="text-xs text-gray-500">Booking (pending)</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <span class="w-3 h-3 rounded-sm bg-purple-100 border border-purple-300 inline-block"></span>
-        <span class="text-xs text-gray-500">Private event</span>
-      </div>
-    </div>
   `,
 })
 export class WeeklyCalendarComponent {
-  days = input.required<TimelineDay[]>();
+  events = input.required<TimelineEventItem[]>();
+  weekStart = input.required<string>();
+  privateEventClick = output<TimelineEventItem>();
 
   private readonly DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   private readonly TODAY = new Date().toISOString().split('T')[0];
 
-  columns = computed<CalendarColumn[]>(() =>
-    this.days().map((day, i) => ({
-      dayLabel: this.DAY_LABELS[i] ?? this.getDayLabel(day.date),
-      dateLabel: this.getDateLabel(day.date),
-      isToday: day.date === this.TODAY,
-      slots: day.slots,
-      bookings: day.bookings,
-      events: day.events,
-    }))
-  );
+  columns = computed<DayColumn[]>(() => {
+    const start = new Date(this.weekStart());
+    const grouped = new Map<string, TimelineEventItem[]>();
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      grouped.set(d.toISOString().split('T')[0], []);
+    }
+
+    for (const event of this.events()) {
+      const dateKey = event.start.split('T')[0];
+      grouped.get(dateKey)?.push(event);
+    }
+
+    return Array.from(grouped.entries()).map(([date, events], i) => ({
+      dayLabel: this.DAY_LABELS[i],
+      dateLabel: this.getDateLabel(date),
+      isToday: date === this.TODAY,
+      events: events.sort((a, b) => a.start.localeCompare(b.start)),
+    }));
+  });
 
   formatTime(iso: string): string {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -133,9 +109,5 @@ export class WeeklyCalendarComponent {
 
   private getDateLabel(iso: string): string {
     return new Date(iso).toLocaleDateString([], { day: 'numeric', month: 'short' });
-  }
-
-  private getDayLabel(iso: string): string {
-    return new Date(iso).toLocaleDateString([], { weekday: 'short' });
   }
 }

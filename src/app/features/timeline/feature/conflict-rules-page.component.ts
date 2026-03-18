@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TimelineService } from '../data-access/timeline.service';
-import { ConflictRule } from '../data-access/models/timeline.model';
+import { ConflictRuleResponse } from '../data-access/models/timeline.model';
 
 @Component({
   selector: 'app-conflict-rules-page',
@@ -43,7 +43,7 @@ import { ConflictRule } from '../data-access/models/timeline.model';
           @for (rule of rules(); track rule.id) {
             <li class="bg-white rounded-xl border border-gray-200 px-5 py-4 flex items-center justify-between">
               <div>
-                <p class="text-sm font-medium text-gray-900">{{ rule.sourceTimelineName }}</p>
+                <p class="text-sm font-medium text-gray-900">{{ rule.sourceTimelineId }}</p>
                 <p class="text-xs text-gray-400 mt-0.5">Action: {{ rule.action }}</p>
               </div>
             </li>
@@ -57,16 +57,13 @@ export class ConflictRulesPageComponent implements OnInit {
   private timelineService = inject(TimelineService);
 
   loading = signal(false);
-  rules = signal<ConflictRule[]>([]);
+  rules = signal<ConflictRuleResponse[]>([]);
 
   ngOnInit(): void {
-    this.loading.set(true);
-    this.timelineService.getConflictRules().subscribe({
-      next: (data) => {
-        this.rules.set(data);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    // NEEDS-CLARIFICATION: The backend endpoint GET /timelines/{timelineId}/conflict-rules
+    // requires a timelineId. There is no endpoint yet to get the current user's timelineId.
+    // This page needs either:
+    //   1. A GET /timelines/me endpoint that returns the user's timeline (with its ID), or
+    //   2. The timelineId passed via route param from the timeline page.
   }
 }

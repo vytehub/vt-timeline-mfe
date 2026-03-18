@@ -6,9 +6,10 @@ import {
   computed,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TimelineService } from '../data-access/timeline.service';
-import { GetTimelineResponse, TimelineDay } from '../data-access/models/timeline.model';
+import { TimelineStateService } from '../data-access/timeline-state.service';
+import { TimelineEventItem } from '../data-access/models/timeline.model';
 import { WeeklyCalendarComponent } from '../ui/weekly-calendar.component';
 
 @Component({
@@ -60,7 +61,7 @@ import { WeeklyCalendarComponent } from '../ui/weekly-calendar.component';
           </div>
         } @else if (isEmpty()) {
           <div class="flex flex-col items-center justify-center py-20 gap-4">
-            <p class="text-gray-500 text-base">No slots or bookings this week.</p>
+            <p class="text-gray-500 text-base">No events this week.</p>
             <p class="text-gray-400 text-sm">Publish a listing to start seeing projected slots here.</p>
             <a
               routerLink="/listing/new"
@@ -68,7 +69,11 @@ import { WeeklyCalendarComponent } from '../ui/weekly-calendar.component';
             >Create Listing</a>
           </div>
         } @else {
-          <app-weekly-calendar [days]="days()" />
+          <app-weekly-calendar
+            [events]="events()"
+            [weekStart]="weekStart()"
+            (privateEventClick)="onPrivateEventClick($event)"
+          />
         }
       </div>
     </div>
@@ -76,23 +81,20 @@ import { WeeklyCalendarComponent } from '../ui/weekly-calendar.component';
 })
 export class TimelinePageComponent implements OnInit {
   private timelineService = inject(TimelineService);
+  private timelineState = inject(TimelineStateService);
+  private router = inject(Router);
 
   loading = signal(false);
   error = signal<string | null>(null);
-  timelineData = signal<GetTimelineResponse | null>(null);
+  events = signal<TimelineEventItem[]>([]);
   weekStart = signal<string>(this.getMondayIso(new Date()));
 
-  days = computed<TimelineDay[]>(() => this.timelineData()?.days ?? []);
-  isEmpty = computed<boolean>(() =>
-    this.days().every(
-      (d) => d.slots.length === 0 && d.bookings.length === 0 && d.events.length === 0
-    )
-  );
+  isEmpty = computed<boolean>(() => this.events().length === 0);
+
   weekLabel = computed<string>(() => {
-    const data = this.timelineData();
-    if (!data) return '';
-    const start = new Date(data.weekStart);
-    const end = new Date(data.weekEnd);
+    const start = new Date(this.weekStart());
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
     const fmt = (d: Date) =>
       d.toLocaleDateString([], { month: 'short', day: 'numeric' });
     return `${fmt(start)} – ${fmt(end)}, ${start.getFullYear()}`;
@@ -121,13 +123,31 @@ export class TimelinePageComponent implements OnInit {
     this.load();
   }
 
+  onPrivateEventClick(event: TimelineEventItem): void {
+    this.router.navigate(['/timeline/events', event.id], {
+      state: { event },
+    });
+  }
+
   private load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.timelineService.getTimeline(this.weekStart()).subscribe({
+
+    const from = this.weekStart();
+    const toDate = new Date(from);
+    toDate.setDate(toDate.getDate() + 6);
+    const to = toDate.toISOString().split('T')[0];
+
+    this.timelineService.getTimelineEvents(from, to).subscribe({
       next: (data) => {
-        this.timelineData.set(data);
+        this.events.set(data.events);
         this.loading.set(false);
+        // Persist the timelineId for use in event create/edit forms.
+        // All events share the same timelineId for the current user.
+        const firstEvent = data.events[0];
+        if (firstEvent) {
+          this.timelineState.setTimelineId(firstEvent.timelineId);
+        }
       },
       error: () => {
         this.error.set('Could not load timeline. Please try again.');
