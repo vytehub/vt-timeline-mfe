@@ -43,6 +43,12 @@ export class BookingService {
     return this.http.post<void>(`${this.apiUrl}/bookings/${id}/confirm`, {});
   }
 
+  /**
+   * Cancels a booking. Used for:
+   *   - Reject (Pending → Cancelled, no refund)
+   *   - Cancel (Confirmed → Cancelled, 100% refund issued)
+   * Backend endpoint: POST /bookings/{id}/cancel
+   */
   cancelBooking(id: string): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/bookings/${id}/cancel`, {});
   }
@@ -53,9 +59,5 @@ export class BookingService {
 
   markNoShow(id: string): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/bookings/${id}/no-show`, {});
-  }
-
-  rejectBooking(id: string): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/bookings/${id}/reject`, {});
   }
 }
