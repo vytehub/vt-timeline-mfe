@@ -7,7 +7,7 @@ import {
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TimelineService } from '../data-access/timeline.service';
 import { TimelineStateService } from '../data-access/timeline-state.service';
 import { TimelineEventItem } from '../data-access/models/timeline.model';
@@ -20,181 +20,23 @@ import {
   selector: 'app-timeline-event-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, FormsModule, ConflictWarningModalComponent],
-  template: `
-    <div class="flex flex-col min-h-screen bg-gray-50 p-6">
-      <a routerLink="/timeline" class="text-sm text-indigo-600 hover:underline mb-4">&larr; Back to Timeline</a>
-
-      <div class="max-w-lg w-full bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h1 class="text-lg font-semibold text-gray-900 mb-6">
-          {{ isEditMode() ? 'Edit Event' : 'New Private Event' }}
-        </h1>
-
-        <!-- Error banner -->
-        @if (error()) {
-          <div class="mb-4 px-4 py-3 rounded-md bg-red-50 border border-red-200">
-            <p class="text-sm text-red-700">{{ error() }}</p>
-          </div>
-        }
-
-        <!-- Form -->
-        <form class="flex flex-col gap-4" (ngSubmit)="onSubmit()">
-          <!-- Title (optional) -->
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-medium text-gray-700" for="event-title">
-              Title <span class="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <input
-              id="event-title"
-              type="text"
-              class="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              placeholder="e.g. Team meeting"
-              [(ngModel)]="title"
-              name="title"
-              maxlength="200"
-            />
-          </div>
-
-          <!-- Start datetime -->
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-medium text-gray-700" for="event-start">
-              Start <span class="text-red-500">*</span>
-            </label>
-            <input
-              id="event-start"
-              type="datetime-local"
-              class="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              [(ngModel)]="startLocal"
-              name="startLocal"
-              required
-            />
-          </div>
-
-          <!-- End datetime -->
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-medium text-gray-700" for="event-end">
-              End <span class="text-red-500">*</span>
-            </label>
-            <input
-              id="event-end"
-              type="datetime-local"
-              class="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              [(ngModel)]="endLocal"
-              name="endLocal"
-              required
-            />
-            @if (endBeforeStart()) {
-              <p class="text-xs text-red-500 mt-0.5">End time must be after start time.</p>
-            }
-          </div>
-
-          <!-- Notes -->
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-medium text-gray-700" for="event-notes">
-              Notes <span class="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <textarea
-              id="event-notes"
-              class="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-              placeholder="Any additional notes..."
-              rows="3"
-              [(ngModel)]="notes"
-              name="notes"
-              maxlength="2000"
-            ></textarea>
-          </div>
-
-          <!-- Actions row -->
-          <div class="flex items-center justify-between pt-2">
-            @if (isEditMode()) {
-              <button
-                type="button"
-                class="px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-md hover:bg-red-50 transition-colors"
-                [disabled]="saving()"
-                (click)="onDelete()"
-              >Delete event</button>
-            } @else {
-              <span></span>
-            }
-
-            <div class="flex items-center gap-3">
-              <a
-                routerLink="/timeline"
-                class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              >Cancel</a>
-              <button
-                type="submit"
-                class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                [disabled]="saving() || !isFormValid()"
-              >
-                {{ saving() ? 'Saving...' : (isEditMode() ? 'Save changes' : 'Create event') }}
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-
-      <!-- Delete confirmation modal -->
-      @if (showDeleteConfirm()) {
-        <div
-          class="fixed inset-0 bg-black bg-opacity-40 z-40 flex items-center justify-center p-4"
-          (click)="showDeleteConfirm.set(false)"
-        >
-          <div
-            class="bg-white rounded-xl shadow-lg max-w-sm w-full z-50 p-6"
-            (click)="$event.stopPropagation()"
-          >
-            <h2 class="text-base font-semibold text-gray-900 mb-2">Delete event?</h2>
-            <p class="text-sm text-gray-500 mb-5">
-              This will permanently remove
-              @if (title) {
-                <span class="font-medium text-gray-700">"{{ title }}"</span>
-              } @else {
-                this event
-              }
-              from your timeline.
-            </p>
-            <div class="flex gap-3 justify-end">
-              <button
-                type="button"
-                class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
-                (click)="showDeleteConfirm.set(false)"
-              >Cancel</button>
-              <button
-                type="button"
-                class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-                [disabled]="saving()"
-                (click)="confirmDelete()"
-              >
-                {{ saving() ? 'Deleting...' : 'Delete' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Conflict warning modal -->
-      @if (conflictWarning()) {
-        <app-conflict-warning-modal
-          [conflict]="conflictWarning()!"
-          (keepBoth)="onConflictKeepBoth()"
-          (cancel)="onConflictCancel()"
-        />
-      }
-    </div>
-  `,
+  imports: [RouterLink, ReactiveFormsModule, ConflictWarningModalComponent],
+  templateUrl: './timeline-event-form.component.html',
+  styleUrl: './timeline-event-form.component.scss',
 })
 export class TimelineEventFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private fb = inject(FormBuilder);
   private timelineService = inject(TimelineService);
   private timelineState = inject(TimelineStateService);
 
-  // Form fields
-  title = '';
-  startLocal = '';
-  endLocal = '';
-  notes = '';
+  form: FormGroup = this.fb.group({
+    title: [''],
+    startLocal: ['', [Validators.required]],
+    endLocal: ['', [Validators.required]],
+    notes: [''],
+  });
 
   // Component state
   saving = signal(false);
@@ -208,14 +50,18 @@ export class TimelineEventFormComponent implements OnInit {
   private pendingCreatedEventId: string | null = null;
 
   endBeforeStart = computed(() => {
-    if (!this.startLocal || !this.endLocal) return false;
-    return new Date(this.endLocal) <= new Date(this.startLocal);
+    const startLocal = this.form.controls['startLocal'].value as string;
+    const endLocal = this.form.controls['endLocal'].value as string;
+    if (!startLocal || !endLocal) return false;
+    return new Date(endLocal) <= new Date(startLocal);
   });
 
   isFormValid = computed(() => {
+    const startLocal = this.form.controls['startLocal'].value as string;
+    const endLocal = this.form.controls['endLocal'].value as string;
     return (
-      this.startLocal.length > 0 &&
-      this.endLocal.length > 0 &&
+      startLocal.length > 0 &&
+      endLocal.length > 0 &&
       !this.endBeforeStart()
     );
   });
@@ -241,11 +87,13 @@ export class TimelineEventFormComponent implements OnInit {
     this.saving.set(true);
     this.error.set(null);
 
+    const { title, startLocal, endLocal, notes } = this.form.getRawValue();
+
     const payload = {
-      start: new Date(this.startLocal).toISOString(),
-      end: new Date(this.endLocal).toISOString(),
-      title: this.title.trim() || null,
-      notes: this.notes.trim() || null,
+      start: new Date(startLocal).toISOString(),
+      end: new Date(endLocal).toISOString(),
+      title: (title as string).trim() || null,
+      notes: (notes as string).trim() || null,
     };
 
     if (this.isEditMode() && this.eventId) {
@@ -361,10 +209,12 @@ export class TimelineEventFormComponent implements OnInit {
           return;
         }
         // PrivateEventItem doesn't have isPrivate/sourceType but we only need form fields.
-        this.title = found.title ?? '';
-        this.startLocal = this.toLocalDatetimeInput(found.start);
-        this.endLocal = this.toLocalDatetimeInput(found.end);
-        this.notes = found.notes ?? '';
+        this.form.patchValue({
+          title: found.title ?? '',
+          startLocal: this.toLocalDatetimeInput(found.start),
+          endLocal: this.toLocalDatetimeInput(found.end),
+          notes: found.notes ?? '',
+        });
       },
       error: () => {
         this.error.set('Could not load event. Please try again.');
@@ -373,10 +223,12 @@ export class TimelineEventFormComponent implements OnInit {
   }
 
   private applyEventToForm(event: TimelineEventItem): void {
-    this.title = event.title ?? '';
-    this.startLocal = this.toLocalDatetimeInput(event.start);
-    this.endLocal = this.toLocalDatetimeInput(event.end);
-    this.notes = event.notes ?? '';
+    this.form.patchValue({
+      title: event.title ?? '',
+      startLocal: this.toLocalDatetimeInput(event.start),
+      endLocal: this.toLocalDatetimeInput(event.end),
+      notes: event.notes ?? '',
+    });
   }
 
   private toLocalDatetimeInput(iso: string): string {
