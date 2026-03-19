@@ -18,59 +18,8 @@ interface DayColumn {
   selector: 'app-weekly-calendar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div class="grid grid-cols-7 gap-px bg-gray-200 rounded-xl overflow-hidden border border-gray-200">
-      @for (col of columns(); track col.dateLabel) {
-        <div
-          class="flex flex-col bg-white min-h-48"
-          [class.bg-indigo-50]="col.isToday"
-        >
-          <!-- Day header -->
-          <div
-            class="px-2 py-2 text-center border-b border-gray-100"
-            [class.bg-indigo-100]="col.isToday"
-          >
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ col.dayLabel }}</p>
-            <p
-              class="text-sm font-semibold mt-0.5"
-              [class.text-indigo-700]="col.isToday"
-              [class.text-gray-800]="!col.isToday"
-            >{{ col.dateLabel }}</p>
-          </div>
-
-          <!-- Events -->
-          <div class="flex flex-col gap-1 p-2 flex-1">
-            @for (event of col.events; track event.id) {
-              @if (event.isPrivate) {
-                <!-- Private event — dashed border, purple, clickable -->
-                <button
-                  type="button"
-                  class="rounded px-2 py-1 border border-dashed border-purple-300 bg-purple-50 text-left w-full cursor-pointer hover:bg-purple-100 transition-colors"
-                  [attr.title]="(event.title || 'Private event') + ' — click to edit'"
-                  (click)="privateEventClick.emit(event)"
-                >
-                  <p class="text-xs font-medium truncate text-purple-800">{{ event.title || 'Private' }}</p>
-                  <p class="text-xs text-purple-600">{{ formatTime(event.start) }}</p>
-                </button>
-              } @else {
-                <!-- Slot / Booking event — solid border, blue, non-interactive -->
-                <div
-                  class="rounded px-2 py-1 border border-blue-200 bg-blue-50"
-                  [attr.title]="event.title || 'Event'"
-                >
-                  <p class="text-xs font-medium truncate text-blue-800">{{ event.title || event.sourceType }}</p>
-                  <p class="text-xs text-blue-600">{{ formatTime(event.start) }}</p>
-                </div>
-              }
-            }
-            @if (col.events.length === 0) {
-              <p class="text-xs text-gray-300 text-center mt-2">—</p>
-            }
-          </div>
-        </div>
-      }
-    </div>
-  `,
+  templateUrl: './weekly-calendar.component.html',
+  styleUrl: './weekly-calendar.component.scss',
 })
 export class WeeklyCalendarComponent {
   events = input.required<TimelineEventItem[]>();

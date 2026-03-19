@@ -17,67 +17,8 @@ import { WeeklyCalendarComponent } from '../ui/weekly-calendar.component';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, WeeklyCalendarComponent],
-  template: `
-    <div class="flex flex-col min-h-screen bg-gray-50">
-      <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
-        <div>
-          <h1 class="text-xl font-semibold text-gray-900">Timeline</h1>
-          @if (weekLabel()) {
-            <p class="text-sm text-gray-500 mt-0.5">{{ weekLabel() }}</p>
-          }
-        </div>
-        <div class="flex items-center gap-2">
-          <button
-            class="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-            (click)="prevWeek()"
-            aria-label="Previous week"
-          >&larr;</button>
-          <button
-            class="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-            (click)="currentWeek()"
-          >Today</button>
-          <button
-            class="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-            (click)="nextWeek()"
-            aria-label="Next week"
-          >&rarr;</button>
-          <a
-            routerLink="/timeline/events/new"
-            class="ml-2 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
-          >+ Event</a>
-        </div>
-      </div>
-
-      <!-- Calendar body -->
-      <div class="flex-1 px-6 py-4">
-        @if (loading()) {
-          <div class="flex items-center justify-center py-20">
-            <p class="text-gray-400 text-sm">Loading timeline...</p>
-          </div>
-        } @else if (error()) {
-          <div class="flex items-center justify-center py-20">
-            <p class="text-red-500 text-sm">{{ error() }}</p>
-          </div>
-        } @else if (isEmpty()) {
-          <div class="flex flex-col items-center justify-center py-20 gap-4">
-            <p class="text-gray-500 text-base">No events this week.</p>
-            <p class="text-gray-400 text-sm">Publish a listing to start seeing projected slots here.</p>
-            <a
-              routerLink="/listing/new"
-              class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
-            >Create Listing</a>
-          </div>
-        } @else {
-          <app-weekly-calendar
-            [events]="events()"
-            [weekStart]="weekStart()"
-            (privateEventClick)="onPrivateEventClick($event)"
-          />
-        }
-      </div>
-    </div>
-  `,
+  templateUrl: './timeline-page.component.html',
+  styleUrl: './timeline-page.component.scss',
 })
 export class TimelinePageComponent implements OnInit {
   private timelineService = inject(TimelineService);

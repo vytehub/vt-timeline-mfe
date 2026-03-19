@@ -12,50 +12,8 @@ import { BookingStatus, ProviderBookingItem } from '../data-access/models/bookin
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DecimalPipe],
-  template: `
-    <button
-      type="button"
-      class="w-full text-left bg-white rounded-lg border border-gray-200 px-4 py-3 hover:border-indigo-300 hover:shadow-sm transition-all"
-      (click)="clicked.emit(booking().id)"
-    >
-      <div class="flex items-start justify-between gap-3">
-        <div class="flex-1 min-w-0">
-          <!-- Client name -->
-          <p class="text-sm font-medium text-gray-900 truncate">
-            {{ booking().intakeName }} {{ booking().intakeLastName }}
-          </p>
-          <!-- Listing title -->
-          @if (booking().listingTitle) {
-            <p class="text-sm text-gray-600 truncate mt-0.5">{{ booking().listingTitle }}</p>
-          }
-          <!-- Service + duration -->
-          @if (booking().serviceName) {
-            <p class="text-xs text-gray-400 mt-0.5">
-              {{ booking().serviceName }}
-              @if (booking().serviceDurationMin) {
-                &nbsp;&bull;&nbsp;{{ booking().serviceDurationMin }} min
-              }
-            </p>
-          }
-          <!-- Price -->
-          @if (booking().listingEffectivePrice !== null) {
-            <p class="text-xs text-gray-500 mt-1">
-              {{ booking().listingEffectivePrice | number:'1.2-2' }}
-              {{ booking().listingCurrency }}
-            </p>
-          }
-        </div>
-        <!-- Status badge -->
-        <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ statusClass(booking().status) }}">
-          {{ statusLabel(booking().status) }}
-        </span>
-      </div>
-      <!-- Created at -->
-      <p class="text-xs text-gray-400 mt-2">
-        Booked {{ formatDate(booking().createdAt) }}
-      </p>
-    </button>
-  `,
+  templateUrl: './booking-list-item.component.html',
+  styleUrl: './booking-list-item.component.scss',
 })
 export class BookingListItemComponent {
   booking = input.required<ProviderBookingItem>();
